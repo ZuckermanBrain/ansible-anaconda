@@ -43,20 +43,11 @@
         path: /tmp/{{anaconda_installer_sh}}
         state: absent
 
-# Why does this exist?  Is this even useful to us or is this just something BR does?
-- name: Create symlink to Anaconda installation elsewhere.
-  become: yes
-  become_user: root
-  file:
-    src: '{{anaconda_install_dir}}'
-    dest: '{{anaconda_link_dir}}'
-    state: link
-
 - name: Update conda packages to latest versions.
   become: yes
   become_user: root
   when: anaconda_pkg_update
-  command: '{{anaconda_link_dir}}/bin/conda update -y --all'
+  command: '{{anaconda_install_dir}}/bin/conda update -y --all'
 
 - name: Remove conda-curl since it conflicts with the system curl
   become: yes
@@ -70,7 +61,7 @@
   become: yes
   become_user: root
   when: anaconda_make_sys_default
-  command: '{{anaconda_link_dir}}/bin/conda init --system'
+  command: '{{anaconda_install_dir}}/bin/conda init --system'
 
 - name: Install additional packages to universal install / add default packages to shared package cache.
   become: yes
