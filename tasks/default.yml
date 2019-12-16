@@ -1,5 +1,5 @@
 ---
-- name: install OS pkg dependencies
+- name: Install OS package dependencies
   become: yes
   become_user: root
   with_items: '{{ anaconda_dep_pkgs | default([]) }}'
@@ -9,7 +9,7 @@
     state: present
     name: '{{ anaconda_os_pkg }}'
 
-- name: check for installation of Anaconda
+- name: Check for installation of Anaconda
   become: yes
   stat:
     path: '{{ anaconda_install_dir }}/bin/conda'
@@ -18,7 +18,7 @@
 
 - when: not anaconda_conda_binary.stat.exists
   block:
-    - name: download installer...
+    - name: Download Anaconda installer.
       become: yes
       become_user: root
       get_url:
@@ -28,7 +28,7 @@
         checksum: '{{anaconda_checksum}}'
         mode: 0755
 
-    - name: install...
+    - name: Run Anaconda installer.
       become: yes
       become_user: root
       command: bash /tmp/{{anaconda_installer_sh}} -b -p {{anaconda_install_dir}}
@@ -36,14 +36,15 @@
         creates: '{{anaconda_install_dir}}'
 
   always:
-    - name: delete installer...
+    - name: Delete Anaconda installer.
       become: yes
       become_user: root
       file:
         path: /tmp/{{anaconda_installer_sh}}
         state: absent
 
-- name: link anaconda...
+# Why does this exist?  Is this even useful to us or is this just something BR does?
+- name: Create symlink to Anaconda installation elsewhere.
   become: yes
   become_user: root
   file:
@@ -51,13 +52,13 @@
     dest: '{{anaconda_link_dir}}'
     state: link
 
-- name: update conda pkgs...
+- name: Update conda packages to latest versions.
   become: yes
   become_user: root
   when: anaconda_pkg_update
   command: '{{anaconda_link_dir}}/bin/conda update -y --all'
 
-- name: remove conda-curl since it conflicts with the system curl
+- name: Remove conda-curl since it conflicts with the system curl
   become: yes
   become_user: root
   conda:
@@ -65,21 +66,13 @@
     state: absent
     executable: '{{ anaconda_conda_bin }}'
 
-- name: make system default python etc...
+- name: Add Anaconda to universal bash profile.
   become: yes
   become_user: root
   when: anaconda_make_sys_default
-  with_items:
-    - f: anaconda.sh
-      d: /etc/profile.d
-  template:
-    src: '{{ to_template.f }}.j2'
-    dest: '{{ to_template.d }}/{{ to_template.f }}'
-    mode: '{{ to_template.m | default("0644") }}'
-  loop_control:
-    loop_var: to_template
+  command: '{{anaconda_link_dir}}/bin/conda init --system'
 
-- name: install additional packages
+- name: Install additional packages to universal install / add default packages to shared package cache.
   become: yes
   become_user: root
   conda:
