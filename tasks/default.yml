@@ -43,34 +43,43 @@
         path: /tmp/{{anaconda_installer_sh}}
         state: absent
 
-- name: Update conda packages to latest versions.
-  become: yes
-  become_user: root
-  when: anaconda_pkg_update
-  command: '{{anaconda_install_dir}}/bin/conda update -y --all'
-
+# Is conda-curl even installed by default or is this just another Blackrock thing?
 - name: Remove conda-curl since it conflicts with the system curl
   become: yes
   become_user: root
-  conda:
-    name: curl
-    state: absent
-    executable: '{{ anaconda_conda_bin }}'
-
+  command: '{{anaconda_install_dir}}/bin/conda remove -y curl'
+  
 - name: Add Anaconda to universal bash profile.
   become: yes
   become_user: root
   when: anaconda_make_sys_default
   command: '{{anaconda_install_dir}}/bin/conda init --system'
 
+- name: Add conda base environment file.
+  become: yes
+  become_user: root
+  copy:
+    content: '{{ anaconda_base_env | to_nice_yaml }}'
+    dest: /tmp/anaconda-base.yml
+  when: anaconda_base_env is defined
+
 - name: Install additional packages to universal install / add default packages to shared package cache.
   become: yes
   become_user: root
-  conda:
-    name: '{{ anaconda_pkg }}'
-    state: present
-    executable: '{{ anaconda_conda_bin }}'
-    channels: '{{ anaconda_install_channels | default("") }}'
-  with_items: '{{anaconda_install_packages | default([])}}'
-  loop_control:
-    loop_var: anaconda_pkg
+  command: '{{anaconda_install_dir}}/bin/conda env update -f=/tmp/anaconda-base.yml'
+  when: anaconda_base_env is defined
+
+- name: Remove conda base environment file.
+  become: yes
+  become_user: root
+  file:
+    path: /tmp/anaconda-base.yml
+    state: absent
+  when: anaconda_base_env is defined
+
+- name: Update conda packages to latest versions.
+  become: yes
+  become_user: root
+  when: anaconda_pkg_update
+  command: '{{anaconda_install_dir}}/bin/conda update -y --all'
+
