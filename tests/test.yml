@@ -2,4 +2,5 @@
 - hosts: localhost
   become: yes
   roles:
+    - base-security
     - app-anaconda

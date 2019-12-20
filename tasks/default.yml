@@ -9,6 +9,19 @@
     state: present
     name: '{{ anaconda_os_pkg }}'
 
+- name: Create an Anaconda service user.
+  user:
+    name: anaconda
+    home: /var/lib/anaconda
+    shell: /sbin/nologin
+
+- name: Make the install directory and change ownership to service account
+  file:
+    path: '{{ anaconda_install_dir }}'
+    owner: anaconda
+    state: directory
+    mode: 0755
+
 - name: Check for installation of Anaconda
   become: yes
   stat:
@@ -20,7 +33,7 @@
   block:
     - name: Download Anaconda installer.
       become: yes
-      become_user: root
+      become_user: anaconda
       get_url:
         url: '{{anaconda_installer_url}}'
         dest: /tmp/{{anaconda_installer_sh}}
@@ -30,15 +43,13 @@
 
     - name: Run Anaconda installer.
       become: yes
-      become_user: root
-      command: bash /tmp/{{anaconda_installer_sh}} -b -p {{anaconda_install_dir}}
-      args:
-        creates: '{{anaconda_install_dir}}'
+      become_user: anaconda
+      command: bash /tmp/{{anaconda_installer_sh}} -b -f -p {{anaconda_install_dir}}
 
   always:
     - name: Delete Anaconda installer.
       become: yes
-      become_user: root
+      become_user: anaconda
       file:
         path: /tmp/{{anaconda_installer_sh}}
         state: absent
@@ -46,7 +57,7 @@
 # Is conda-curl even installed by default or is this just another Blackrock thing?
 - name: Remove conda-curl since it conflicts with the system curl
   become: yes
-  become_user: root
+  become_user: anaconda
   command: '{{anaconda_install_dir}}/bin/conda remove -y curl'
   
 - name: Add Anaconda to universal bash profile.
@@ -57,7 +68,7 @@
 
 - name: Add conda base environment file.
   become: yes
-  become_user: root
+  become_user: anaconda
   copy:
     content: '{{ anaconda_base_env | to_nice_yaml }}'
     dest: /tmp/anaconda-base.yml
@@ -65,21 +76,25 @@
 
 - name: Install additional packages to universal install / add default packages to shared package cache.
   become: yes
-  become_user: root
+  become_user: anaconda
   command: '{{anaconda_install_dir}}/bin/conda env update -f=/tmp/anaconda-base.yml'
   when: anaconda_base_env is defined
 
 - name: Remove conda base environment file.
   become: yes
-  become_user: root
+  become_user: anaconda
   file:
     path: /tmp/anaconda-base.yml
     state: absent
   when: anaconda_base_env is defined
 
-- name: Update conda packages to latest versions.
+# We don't do anything other than refresh the cache because Anaconda
+# has a tendency to break things, like conda itself...
+# I encountered this while testing without '--download-only':
+# https://github.com/conda/conda/issues/9367
+- name: Refresh the package cache to include latest versions.
   become: yes
-  become_user: root
+  become_user: anaconda
   when: anaconda_pkg_update
-  command: '{{anaconda_install_dir}}/bin/conda update -y --all'
+  command: '{{anaconda_install_dir}}/bin/conda update -y --all --download-only'
 
