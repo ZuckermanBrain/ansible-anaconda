@@ -1,0 +1,12 @@
+#!/bin/bash
+# This script regularly updates the Anaconda shared package cache using
+# exported environment backups from users.
+
+export CONDA_USER_STORAGE={{ anaconda_user_storage }}
+for CONDA_ENV in ${CONDA_USER_STORAGE}/*/envs/*;
+do
+	# Dumb workaround because "conda install --file=<name>.yml --download-only" hangs on solving the environment
+	# Possibly related https://github.com/conda/conda/issues/8197
+	{{ anaconda_install_dir }}/bin/conda create -n cache_update --clone ${CONDA_ENV}
+	{{ anaconda_install_dir }}/bin/conda env remove -y -n cache_update
+done

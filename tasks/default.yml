@@ -15,10 +15,13 @@
     home: /var/lib/anaconda
     shell: /sbin/nologin
 
+#TODO: Ensure git is installed on host and that service user's name and e-mail are configured.
+
 - name: Make the install directory and change ownership to service account
   file:
     path: '{{ anaconda_install_dir }}'
     owner: anaconda
+    group: anaconda
     state: directory
     mode: 0755
 
@@ -59,12 +62,32 @@
   become: yes
   become_user: anaconda
   command: '{{anaconda_install_dir}}/bin/conda remove -y curl'
+  ignore_errors: true
   
 - name: Add Anaconda to universal bash profile.
   become: yes
   become_user: root
-  when: anaconda_make_sys_default
+  when: anaconda_make_sys_default and not anaconda_conda_binary.stat.exists
   command: '{{anaconda_install_dir}}/bin/conda init --system'
+
+# All directories / files will be owned by the service user's group
+# so that it can read/write as necessary for various back-up and other maintenance operations.
+- name: Create centralized location for user environments and package caches.
+  become: yes
+  become_user: root
+  file:
+    path: '{{ anaconda_user_storage }}'
+    owner: anaconda
+    group: anaconda
+    state: directory
+    mode: 02777
+
+- name: Use environment variables to make user environments and package caches stored in a centralized location
+  become: yes
+  become_user: root
+  template:
+    src: conda-storage.sh.j2
+    dest: /etc/profile.d/conda-storage.sh
 
 - name: Add conda base environment file.
   become: yes
@@ -97,4 +120,17 @@
   become_user: anaconda
   when: anaconda_pkg_update
   command: '{{anaconda_install_dir}}/bin/conda update -y --all --download-only'
+
+- name: Add scripts to back-up user environments, update shared package cache, and prune individual user package caches.
+  become: yes
+  become_user: anaconda
+  template:
+    src: "{{ item }}"
+    dest: "{{anaconda_install_dir}}/bin/{{ item | replace('.j2','') }}"
+    mode: 0700
+  with_items:
+    - conda-storage-clean.sh.j2
+    - conda-storage-backup.sh.j2
+    - conda-cache-update.sh.j2
+
 

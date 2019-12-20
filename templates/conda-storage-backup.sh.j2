@@ -1,0 +1,47 @@
+#!/bin/bash
+# This script regularly exports conda user environments as YAML
+# files into a git repository.
+
+export CONDA_USER_STORAGE={{ anaconda_user_storage }}
+for CONDA_USER in ${CONDA_USER_STORAGE}/*;
+do
+	CONDA_USER_EXPORTS=${CONDA_USER}/exports
+	# Create directory for backups to live in and initialize git repo if git is installed.
+	if [ ! -d ${CONDA_USER_EXPORTS} ]; 
+	then
+		mkdir ${CONDA_USER_EXPORTS}
+		if which git 2>&1 > /dev/null;
+		then
+			pushd ${CONDA_USER_EXPORTS}
+			git init
+			popd
+		fi
+	fi
+	if [ ! -d ${CONDA_USER_EXPORTS}/.git ] && which git 2>&1 > /dev/null;
+	then
+		pushd ${CONDA_USER_EXPORTS}
+		git init
+		popd
+	fi
+	ENVLIST=""
+	pushd ${CONDA_USER}/envs
+	for CONDA_ENV in *;
+	do
+		if [ -z ${ENVLIST} ];
+		then
+			ENVLIST=${CONDA_ENV}
+		else
+			ENVLIST=${ENVLIST},${CONDA_ENV}
+		fi
+		# We could use this instead of "conda list -e" instead (which is compatible with "conda install") but conda 4.8 seems to crap out when installing from a list in this manner.
+		{{ anaconda_install_dir }}/bin/conda env export -p ${CONDA_USER}/envs/${CONDA_ENV} -f ${CONDA_USER_EXPORTS}/${CONDA_ENV}.yml
+	done
+	popd
+	if which git 2>&1 > /dev/null;
+	then
+		pushd ${CONDA_USER_EXPORTS}
+		git add *
+		git commit -m "Anaconda environment backups for ${ENVLIST}"
+		popd
+	fi
+done
