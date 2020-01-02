@@ -11,17 +11,22 @@
 
 - name: Create an Anaconda service user.
   user:
-    name: anaconda
-    home: /var/lib/anaconda
+    name: '{{ anaconda_service_user }}'
+    home: /var/lib/{{ anaconda_service_user }}
     shell: /sbin/nologin
 
-#TODO: Ensure git is installed on host and that service user's name and e-mail are configured.
+- name: Ensure that service user's name and e-mail are configured for git.
+  become: yes
+  become_user: '{{ anaconda_service_user }}'
+  template:
+    src: gitconfig.j2
+    dest: /var/lib/{{ anaconda_service_user }}/.gitconfig
 
 - name: Make the install directory and change ownership to service account
   file:
     path: '{{ anaconda_install_dir }}'
-    owner: anaconda
-    group: anaconda
+    owner: '{{ anaconda_service_user }}'
+    group: '{{ anaconda_service_user }}'
     state: directory
     mode: 0755
 
@@ -36,7 +41,7 @@
   block:
     - name: Download Anaconda installer.
       become: yes
-      become_user: anaconda
+      become_user: '{{ anaconda_service_user }}'
       get_url:
         url: '{{anaconda_installer_url}}'
         dest: /tmp/{{anaconda_installer_sh}}
@@ -46,13 +51,13 @@
 
     - name: Run Anaconda installer.
       become: yes
-      become_user: anaconda
+      become_user: '{{ anaconda_service_user }}'
       command: bash /tmp/{{anaconda_installer_sh}} -b -f -p {{anaconda_install_dir}}
 
   always:
     - name: Delete Anaconda installer.
       become: yes
-      become_user: anaconda
+      become_user: '{{ anaconda_service_user }}'
       file:
         path: /tmp/{{anaconda_installer_sh}}
         state: absent
@@ -60,7 +65,7 @@
 # Is conda-curl even installed by default or is this just another Blackrock thing?
 - name: Remove conda-curl since it conflicts with the system curl
   become: yes
-  become_user: anaconda
+  become_user: '{{ anaconda_service_user }}'
   command: '{{anaconda_install_dir}}/bin/conda remove -y curl'
   ignore_errors: true
   
@@ -77,8 +82,8 @@
   become_user: root
   file:
     path: '{{ anaconda_user_storage }}'
-    owner: anaconda
-    group: anaconda
+    owner: '{{ anaconda_service_user }}'
+    group: '{{ anaconda_service_user }}'
     state: directory
     mode: 02777
 
@@ -91,7 +96,7 @@
 
 - name: Add conda base environment file.
   become: yes
-  become_user: anaconda
+  become_user: '{{ anaconda_service_user }}'
   copy:
     content: '{{ anaconda_base_env | to_nice_yaml }}'
     dest: /tmp/anaconda-base.yml
@@ -99,13 +104,13 @@
 
 - name: Install additional packages to universal install / add default packages to shared package cache.
   become: yes
-  become_user: anaconda
+  become_user: '{{ anaconda_service_user }}'
   command: '{{anaconda_install_dir}}/bin/conda env update -f=/tmp/anaconda-base.yml'
   when: anaconda_base_env is defined
 
 - name: Remove conda base environment file.
   become: yes
-  become_user: anaconda
+  become_user: '{{ anaconda_service_user }}'
   file:
     path: /tmp/anaconda-base.yml
     state: absent
@@ -117,13 +122,13 @@
 # https://github.com/conda/conda/issues/9367
 - name: Refresh the package cache to include latest versions.
   become: yes
-  become_user: anaconda
+  become_user: '{{ anaconda_service_user }}'
   when: anaconda_pkg_update
   command: '{{anaconda_install_dir}}/bin/conda update -y --all --download-only'
 
 - name: Add scripts to back-up user environments, update shared package cache, and prune individual user package caches.
   become: yes
-  become_user: anaconda
+  become_user: '{{ anaconda_service_user }}'
   template:
     src: "{{ item }}"
     dest: "{{anaconda_install_dir}}/bin/{{ item | replace('.j2','') }}"
@@ -133,4 +138,16 @@
     - conda-storage-backup.sh.j2
     - conda-cache-update.sh.j2
 
-
+- name: Add cronjobs to back-up user environments, update shared package cache, and prune individual user package caches.
+  become: yes
+  become_user: '{{ anaconda_service_user }}'
+  cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute }}"
+    hour: "{{ item.hour }}"
+    day: "{{ item.day }}"
+    month: "{{ item.month }}"
+    weekday: "{{ item.weekday }}"
+    user: '{{ anaconda_service_user }}'
+    job: "{{anaconda_install_dir}}/bin/{{ item.command }}"
+  with_items: "{{ anaconda_cron_list }}"

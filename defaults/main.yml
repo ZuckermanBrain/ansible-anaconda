@@ -8,6 +8,8 @@ anaconda_python_ver: 3
 # anaconda version
 anaconda_ver: '2019.10'
 
+anaconda_service_user: anaconda
+
 # anaconda checksums...
 # https://repo.continuum.io/archive/
 anaconda_checksums:
@@ -393,3 +395,26 @@ anaconda_user_storage: /srv/anaconda
 # additional control over windows-installer specific options
 win_anaconda_installation_type: JustMe
 win_anaconda_add_to_path: True
+
+anaconda_cron_list:
+  - name: conda-storage-clean
+    minute: "30"
+    hour: "*"
+    day: "*"
+    month: "*"
+    weekday: "*"
+    command: conda-storage-clean.sh
+  - name: conda-storage-backup
+    minute: "15,45"
+    hour: "*"
+    day: "*"
+    month: "*"
+    weekday: "*"
+    command: conda-storage-backup.sh
+  - name: conda-cache-update
+    minute: "0"
+    hour: "*"
+    day: "*"
+    month: "*"
+    weekday: "*"
+    command: conda-cache-update.sh
