@@ -388,8 +388,6 @@ anaconda_pkg_update: True
 #    - zstd=1.3.7=h0b5b093_0
 #  prefix: '{{anaconda_install_dir}}'
  
-anaconda_group: vagrant
-
 anaconda_user_storage: /srv/anaconda
 
 # additional control over windows-installer specific options
@@ -404,13 +402,6 @@ anaconda_cron_list:
     month: "*"
     weekday: "*"
     command: conda-storage-clean.sh
-  - name: conda-storage-backup
-    minute: "15,45"
-    hour: "*"
-    day: "*"
-    month: "*"
-    weekday: "*"
-    command: conda-storage-backup.sh
   - name: conda-cache-update
     minute: "0"
     hour: "*"
