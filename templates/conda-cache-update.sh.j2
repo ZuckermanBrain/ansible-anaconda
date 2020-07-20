@@ -1,6 +1,7 @@
 #!/bin/bash
 # This script regularly updates the Anaconda shared package cache using
 # exported environment backups from users.
+shopt -s nullglob
 
 export CONDA_USER_STORAGE={{ anaconda_user_storage }}
 for CONDA_ENV in ${CONDA_USER_STORAGE}/*/envs/*;

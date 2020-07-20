@@ -79,6 +79,10 @@ __conda_postinstall() {
 		then
 			mkdir ${CONDA_USER_EXPORTS}
 		fi
+		if [ ! -f ~/.gitconfig ]; then
+			git config --global user.email "$(whoami)@localhost"
+			git config --global user.name "$(whoami)"
+		fi
 		if [ ! -d ${CONDA_USER_EXPORTS}/.git ] && which git 2>&1 > /dev/null;
 		then
 			pushd ${CONDA_USER_EXPORTS} > /dev/null

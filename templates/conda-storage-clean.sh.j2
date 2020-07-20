@@ -2,6 +2,7 @@
 # This script iterates through each individual user's local stored package cache
 # in a centralized, shared Anaconda environment and removes cached items
 # that are no longer in active use.
+shopt -s nullglob
 
 export CONDA_USER_STORAGE={{ anaconda_user_storage }}
 for CONDA_USER in ${CONDA_USER_STORAGE}/*;

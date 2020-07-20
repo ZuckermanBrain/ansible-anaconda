@@ -1,6 +1,7 @@
 #!/bin/bash
 # This script regularly exports conda user environments as YAML
 # files into a git repository.
+shopt -s nullglob
 
 export CONDA_USER_STORAGE={{ anaconda_user_storage }}
 for CONDA_USER in ${CONDA_USER_STORAGE}/*;
