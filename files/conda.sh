@@ -116,7 +116,7 @@ conda() {
                 "$CONDA_EXE" $_CE_M $_CE_CONDA "$cmd" "$@"
                 \local t1=$?
                 PATH="${CONDA_INTERNAL_OLDPATH}"
-                CONDA_TRANSACTION="$cmd $@"
+                CONDA_TRANSACTION="conda $cmd $@"
                 __conda_postinstall
                 unset CONDA_TRANSACTION
                 if [ $t1 = 0 ]; then
@@ -139,6 +139,29 @@ conda() {
                 ;;
         esac
     fi
+}
+
+# Override pip with a bash function to keep track of all pip-based transactions, since conda list --revisions
+# doesn't track pip transactions.
+pip() {
+        if [ ${CONDA_DEFAULT_ENV} != "base" ]; then
+                \local cmd="$1"
+                shift
+                case "$cmd" in
+                    install|uninstall)
+                        CONDA_TRANSACTION="pip $cmd $@"
+                        python -m pip $cmd $@
+                        __conda_postinstall
+                        unset CONDA_TRANSACTION
+                        ;;
+                    *)
+                        python -m pip $cmd $@
+                        ;;
+                esac
+        else
+                echo "pip is not supported for the global conda environment."
+                echo "To use pip, please activate one of your own conda environments and then try again."
+        fi
 }
 
 if [ -z "${CONDA_SHLVL+x}" ]; then

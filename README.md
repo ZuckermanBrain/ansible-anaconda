@@ -1,10 +1,14 @@
-andrewrothstein.anaconda
+app-anaconda
 =========
-[![Build Status](https://travis-ci.org/andrewrothstein/ansible-anaconda.svg?branch=master)](https://travis-ci.org/andrewrothstein/ansible-anaconda)
+A role that installs [Anaconda](https://www.continuum.io/anaconda-overview) or Miniconda.
 
-[![Join the chat at https://gitter.im/andrewrothstein/ansible-anaconda](https://badges.gitter.im/andrewrothstein/ansible-anaconda.svg)](https://gitter.im/andrewrothstein/ansible-anaconda?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Notable features:
 
-A role that installs [Anaconda](https://www.continuum.io/anaconda-overview)
+ * Has a service user that runs several cron jobs to perform housekeeping tasks for a multiuser installation.
+ * The service user runs `conda clean` for all users at a predefined interval.
+ * The service user installs all software that has been installed in a user's local environment into the base conda environment.
+ * End-users don't interact with the base conda environment directly (i.e., it's read-only to all but the service user).  This resolves concurrency/locking issues related to multiple users issuing a `conda install/uninstall` command at the same time.
+ * Has post-install/uninstall hooks for `pip` and `conda` to store transaction history in a git repository.  This addresses a current shortcoming of `conda list --revisions`, where this command only accounts for transactions performed via `conda` while not tracking `pip`-based transactions.
 
 Requirements
 ------------
@@ -27,7 +31,7 @@ Example Playbook
 ```yml
 - hosts: servers
   roles:
-    - andrewrothstein.anaconda
+    - app-anaconda
 ```
 
 License
@@ -39,3 +43,4 @@ Author Information
 ------------------
 
 Andrew Rothstein <andrew.rothstein@gmail.com>
+John Pellman <jsp2205@columbia.edu>
