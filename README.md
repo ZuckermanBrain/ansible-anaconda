@@ -43,4 +43,5 @@ Author Information
 ------------------
 
 Andrew Rothstein <andrew.rothstein@gmail.com>
+
 John Pellman <jsp2205@columbia.edu>
